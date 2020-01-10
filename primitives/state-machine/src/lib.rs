@@ -40,7 +40,7 @@ mod overlayed_changes;
 mod proving_backend;
 mod trie_backend;
 mod trie_backend_essence;
-mod usage;
+mod stats;
 
 pub use sp_trie::{trie_types::{Layout, TrieDBMut}, TrieMut, DBValue, MemoryDB};
 pub use testing::TestExternalities;
@@ -68,7 +68,7 @@ pub use proving_backend::{
 pub use trie_backend_essence::{TrieBackendStorage, Storage};
 pub use trie_backend::TrieBackend;
 pub use error::{Error, ExecutionError};
-pub use usage::{UsageInfo, UsageUnit};
+pub use stats::{UsageInfo, UsageUnit};
 pub use in_memory_backend::InMemory as InMemoryBackend;
 
 type CallResult<R, E> = Result<NativeOrEncoded<R>, E>;

@@ -302,7 +302,7 @@ pub struct CachingState<S: StateBackend<HasherFor<B>>, B: BlockT> {
 	/// Backing state.
 	state: S,
 	/// Cache data.
-	pub cache: CacheChanges<H, B>,
+	pub cache: CacheChanges<B>,
 }
 
 impl<S: StateBackend<HasherFor<B>>, B: BlockT> std::fmt::Debug for CachingState<S, B> {

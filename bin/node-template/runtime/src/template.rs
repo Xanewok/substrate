@@ -8,8 +8,20 @@
 /// For more guidance on Substrate modules, see the example module
 /// https://github.com/paritytech/substrate/blob/master/frame/example/src/lib.rs
 
-use frame_support::{decl_module, decl_storage, decl_event, dispatch};
-use system::ensure_signed;
+use frame_support::{decl_module, decl_storage, decl_event, dispatch, debug};
+use system::{ensure_signed, offchain};
+
+use sp_runtime::offchain::http;
+use sp_std::vec::Vec;
+
+use sp_core::crypto::KeyTypeId;
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"btc!");
+
+pub mod crypto {
+	use super::KEY_TYPE;
+	use sp_runtime::app_crypto::{app_crypto, sr25519};
+	app_crypto!(sr25519, KEY_TYPE);
+}
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -17,6 +29,12 @@ pub trait Trait: system::Trait {
 
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	/// The overarching event type.
+	type Call: From<Call<Self>>;
+
+	/// Transaction submitter.
+	type SubmitTransaction: offchain::SubmitSignedTransaction<Self, <Self as Trait>::Call>;
 }
 
 // This module's storage items.
@@ -26,6 +44,7 @@ decl_storage! {
 		// Here we are declaring a StorageValue, `Something` as a Option<u32>
 		// `get(fn something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
 		Something get(fn something): Option<u32>;
+		Prices get(fn prices): Vec<u32>;
 	}
 }
 
@@ -51,6 +70,106 @@ decl_module! {
 			// here we are raising the Something event
 			Self::deposit_event(RawEvent::SomethingStored(something, who));
 			Ok(())
+		}
+		pub fn submit_btc_price(origin, price: u32) -> dispatch::DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			debug::info!("Adding to the average: {}", price);
+			let average = Prices::mutate(|prices| {
+				const MAX_LEN: usize = 64;
+
+				if prices.len() < MAX_LEN {
+					prices.push(price);
+				} else {
+					prices[price as usize % MAX_LEN] = price;
+				}
+
+				// TODO Whatchout for overflows
+				prices.iter().sum::<u32>() / prices.len() as u32
+			});
+			debug::info!("Current average price is: {}", average);
+			// here we are raising the Something event
+			Self::deposit_event(RawEvent::SomethingStored(price, who));
+			Ok(())
+		}
+
+		fn offchain_worker(block_number: T::BlockNumber) {
+			debug::RuntimeLogger::init();
+			let average: Option<u32> = {
+				let prices = Prices::get();
+				if prices.is_empty() {
+					None
+				} else {
+					Some(prices.iter().sum::<u32>() / prices.len() as u32)
+				}
+			};
+			debug::warn!("Hello World from offchain workers!");
+			debug::warn!("Current price of BTC is: {:?}", average);
+
+			let block_hash = <system::Module<T>>::block_hash(block_number - 1.into());
+			debug::warn!("Current block is: {:?} ({:?})", block_number, block_hash);
+
+			let price = match Self::fetch_btc_price() {
+				Ok(price) => {
+					debug::warn!("Got BTC price: {} cents", price);
+					price
+				},
+				Err(_) => {
+					debug::warn!("Error fetching BTC price.");
+					// TODO [ToDr] What to do here?
+					return
+				}
+			};
+
+			Self::submit_btc_price_on_chain(price);
+		}
+	}
+}
+
+impl<T: Trait> Module<T> {
+	fn fetch_btc_price() -> Result<u32, http::Error> {
+		let pending = http::Request::get(
+			"https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD"
+		).send().map_err(|_| http::Error::IoError)?;
+
+		let response = pending.wait()?;
+		if response.code != 200 {
+			debug::warn!("Unexpected status code: {}", response.code);
+			return Err(http::Error::Unknown);
+		}
+
+		const START_IDX: usize = "{\"USD\":".len();
+		let body = response.body().collect::<Vec<u8>>();
+		let json = match core::str::from_utf8(&body) {
+			Ok(json) if json.len() > START_IDX => json,
+			_ => {
+				debug::warn!("Unexpected (non-utf8 or too short) response received: {:?}", body);
+				return Err(http::Error::Unknown);
+			}
+		};
+
+		let price = &json[START_IDX .. json.len() - 1];
+		let pricef: f64 = match price.parse() {
+			Ok(pricef) => pricef,
+			Err(_) => {
+				debug::warn!("Unparsable price: {:?}", price);
+				return Err(http::Error::Unknown);
+			}
+		};
+
+		Ok((pricef * 100.) as u32)
+	}
+
+	fn submit_btc_price_on_chain(price: u32) {
+		use system::offchain::SubmitSignedTransaction;
+
+		let call = Call::submit_btc_price(price);
+		let res = T::SubmitTransaction::submit_signed(call);
+
+		if res.is_empty() {
+			debug::error!("No local accounts found.");
+		} else {
+			debug::info!("Sent transactions from: {:?}", res);
 		}
 	}
 }

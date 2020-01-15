@@ -2763,6 +2763,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lite-json"
+version = "0.1.0"
+source = "git+https://github.com/Xanewok/lite-json?branch=no-std-float-renamed#37d64c4fd7b5c1e18a7985f2aa31aa14d8de525e"
+dependencies = [
+ "num-traits 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "paste 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3253,6 +3262,7 @@ dependencies = [
  "frame-executive 2.0.0",
  "frame-support 2.0.0",
  "frame-system 2.0.0",
+ "lite-json 0.1.0 (git+https://github.com/Xanewok/lite-json?branch=no-std-float-renamed)",
  "pallet-aura 2.0.0",
  "pallet-balances 2.0.0",
  "pallet-grandpa 2.0.0",
@@ -8481,6 +8491,7 @@ dependencies = [
 "checksum libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)" = "2eb5e43362e38e2bca2fd5f5134c4d4564a23a5c28e9b95411652021a8675ebe"
 "checksum linked-hash-map 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ae91b68aebc4ddb91978b11a1b02ddd8602a05ec19002801c5666000e05e0f83"
 "checksum linked_hash_set 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3c7c91c4c7bbeb4f2f7c4e5be11e6a05bd6830bc37249c47ce1ad86ad453ff9c"
+"checksum lite-json 0.1.0 (git+https://github.com/Xanewok/lite-json?branch=no-std-float-renamed)" = "<none>"
 "checksum lock_api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "62ebf1391f6acad60e5c8b43706dde4582df75c06698ab44511d15016bc2442c"
 "checksum lock_api 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e57b3997725d2b60dbec1297f6c2e2957cc383db1cebd6be812163f969c7d586"
 "checksum log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"

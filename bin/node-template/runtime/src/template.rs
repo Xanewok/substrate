@@ -138,24 +138,24 @@ impl<T: Trait> Module<T> {
 			return Err(http::Error::Unknown);
 		}
 
-		const START_IDX: usize = "{\"USD\":".len();
 		let body = response.body().collect::<Vec<u8>>();
-		let json = match core::str::from_utf8(&body) {
-			Ok(json) if json.len() > START_IDX => json,
-			_ => {
-				debug::warn!("Unexpected (non-utf8 or too short) response received: {:?}", body);
-				return Err(http::Error::Unknown);
-			}
-		};
 
-		let price = &json[START_IDX .. json.len() - 1];
-		let pricef: f64 = match price.parse() {
-			Ok(pricef) => pricef,
-			Err(_) => {
-				debug::warn!("Unparsable price: {:?}", price);
-				return Err(http::Error::Unknown);
-			}
-		};
+		use lite_json::json::JsonValue;
+
+		let str = core::str::from_utf8(&body).map_err(|_| http::Error::Unknown)?;
+		let parsed = lite_json::parse_json(str).map_err(|_| http::Error::Unknown)?;
+		let pricef = match parsed {
+			JsonValue::Object(obj) =>
+				obj.into_iter()
+					.find(|(key, _)| key == &['U', 'S', 'D'])
+					.and_then(|(_, val)| if let JsonValue::Number(val) = val {
+							Some(val.to_f64())
+						} else {
+							None
+						}
+					),
+			_ => None,
+		}.ok_or(http::Error::Unknown)?;
 
 		Ok((pricef * 100.) as u32)
 	}

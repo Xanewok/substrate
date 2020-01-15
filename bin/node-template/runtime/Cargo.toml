@@ -16,6 +16,8 @@ system = { version = "2.0.0", default-features = false, package = "frame-system"
 timestamp = { version = "2.0.0", default-features = false, package = "pallet-timestamp", path = "../../../frame/timestamp" }
 transaction-payment = { version = "2.0.0", default-features = false, package = "pallet-transaction-payment", path = "../../../frame/transaction-payment" }
 
+lite-json = { version = "0.1", default-features = false, git = "https://github.com/Xanewok/lite-json", branch = "no-std-float-renamed", features = ["float"] }
+
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 frame-executive = { version = "2.0.0", default-features = false, path = "../../../frame/executive" }
 safe-mix = { version = "1.0.0", default-features = false }

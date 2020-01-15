@@ -140,22 +140,15 @@ impl<T: Trait> Module<T> {
 
 		let body = response.body().collect::<Vec<u8>>();
 
-		use serde_json::Value;
+		#[derive(alt_serde::Deserialize)]
+		#[serde(crate = "alt_serde")]
+		#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+		struct Response {
+			usd: f64
+		}
 
 		let str = core::str::from_utf8(&body).map_err(|_| http::Error::Unknown)?;
-		let parsed = serde_json::from_str(str).map_err(|_| http::Error::Unknown)?;
-		let pricef = match parsed {
-			Value::Object(obj) =>
-				obj.into_iter()
-					.find(|(key, _)| key == "USD")
-					.and_then(|(_, val)| if let Value::Number(val) = val {
-							Some(val.as_f64().unwrap())
-						} else {
-							None
-						}
-					),
-			_ => None,
-		}.ok_or(http::Error::Unknown)?;
+		let Response { usd: pricef } = serde_json::from_str(str).map_err(|_| http::Error::Unknown)?;
 
 		Ok((pricef * 100.) as u32)
 	}

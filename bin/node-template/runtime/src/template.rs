@@ -140,16 +140,16 @@ impl<T: Trait> Module<T> {
 
 		let body = response.body().collect::<Vec<u8>>();
 
-		use lite_json::json::JsonValue;
+		use serde_json::Value;
 
 		let str = core::str::from_utf8(&body).map_err(|_| http::Error::Unknown)?;
-		let parsed = lite_json::parse_json(str).map_err(|_| http::Error::Unknown)?;
+		let parsed = serde_json::from_str(str).map_err(|_| http::Error::Unknown)?;
 		let pricef = match parsed {
-			JsonValue::Object(obj) =>
+			Value::Object(obj) =>
 				obj.into_iter()
-					.find(|(key, _)| key == &['U', 'S', 'D'])
-					.and_then(|(_, val)| if let JsonValue::Number(val) = val {
-							Some(val.to_f64())
+					.find(|(key, _)| key == "USD")
+					.and_then(|(_, val)| if let Value::Number(val) = val {
+							Some(val.as_f64().unwrap())
 						} else {
 							None
 						}

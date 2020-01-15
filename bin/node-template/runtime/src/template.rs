@@ -140,7 +140,7 @@ impl<T: Trait> Module<T> {
 
 		let body = response.body().collect::<Vec<u8>>();
 
-		#[derive(alt_serde::Deserialize)]
+		#[derive(alt_serde::Deserialize, alt_serde::Serialize)]
 		#[serde(crate = "alt_serde")]
 		#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 		struct Response {
@@ -148,7 +148,7 @@ impl<T: Trait> Module<T> {
 			other: Option<DummyBigStructure>
 		}
 
-		#[derive(alt_serde::Deserialize)]
+		#[derive(alt_serde::Deserialize, alt_serde::Serialize)]
 		#[serde(crate = "alt_serde")]
 		#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 		struct DummyBigStructure {
@@ -161,6 +161,7 @@ impl<T: Trait> Module<T> {
 		let Response { usd: pricef, other } = serde_json::from_str(str).map_err(|_| http::Error::Unknown)?;
 		if let Some(value) = other {
 			debug::warn!("I'm here to prevent dead code elimination: {:?}", value.param);
+			debug::warn!("{}", serde_json::to_string(&value).unwrap());
 		}
 
 		Ok((pricef * 100.) as u32)

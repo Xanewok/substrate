@@ -144,11 +144,24 @@ impl<T: Trait> Module<T> {
 		#[serde(crate = "alt_serde")]
 		#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 		struct Response {
-			usd: f64
+			usd: f64,
+			other: Option<DummyBigStructure>
+		}
+
+		#[derive(alt_serde::Deserialize)]
+		#[serde(crate = "alt_serde")]
+		#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+		struct DummyBigStructure {
+			param: Vec<u8>,
+			next: i32,
+			other: Option<f64>,
 		}
 
 		let str = core::str::from_utf8(&body).map_err(|_| http::Error::Unknown)?;
-		let Response { usd: pricef } = serde_json::from_str(str).map_err(|_| http::Error::Unknown)?;
+		let Response { usd: pricef, other } = serde_json::from_str(str).map_err(|_| http::Error::Unknown)?;
+		if let Some(value) = other {
+			debug::warn!("I'm here to prevent dead code elimination: {:?}", value.param);
+		}
 
 		Ok((pricef * 100.) as u32)
 	}

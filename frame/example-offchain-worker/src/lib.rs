@@ -259,6 +259,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_signed, offchain};
 use sp_runtime::offchain::http;
+use sp_std::vec::Vec;
 use sp_core::crypto::KeyTypeId;
 use serde_json as json;
 

@@ -15,8 +15,9 @@ use sp_runtime::{
 	impl_opaque_keys, MultiSignature
 };
 use sp_runtime::traits::{
-	BlakeTwo256, Block as BlockT, StaticLookup, Verify, ConvertInto, IdentifyAccount
+	self, BlakeTwo256, Block as BlockT, SaturatedConversion, StaticLookup, Verify, ConvertInto, IdentifyAccount
 };
+use system::offchain::TransactionSubmitter;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use grandpa::AuthorityList as GrandpaAuthorityList;
@@ -32,6 +33,7 @@ pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
+	debug,
 	StorageValue, construct_runtime, parameter_types,
 	traits::Randomness,
 	weights::Weight,
@@ -199,6 +201,12 @@ parameter_types! {
 	pub const CreationFee: u128 = 0;
 }
 
+impl example_offchain_worker::Trait for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type SubmitTransaction = TransactionSubmitter<example_offchain_worker::crypto::Public, Runtime, UncheckedExtrinsic>;
+}
+
 impl balances::Trait for Runtime {
 	/// The type for recording an account's balance.
 	type Balance = Balance;
@@ -255,6 +263,7 @@ construct_runtime!(
 		// Used for the module template in `./template.rs`
 		TemplateModule: template::{Module, Call, Storage, Event<T>},
 		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
+		ExampleOffchainWorker: example_offchain_worker::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -370,3 +379,41 @@ impl_runtime_apis! {
 		}
 	}
 }
+
+impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtime {
+	type Public = <Signature as Verify>::Signer;
+	type Signature = Signature;
+
+	fn create_transaction<TSigner: system::offchain::Signer<Self::Public, Self::Signature>>(
+			call: Call,
+			public: Self::Public,
+			account: AccountId,
+			index: Index,
+	) -> Option<(Call, <UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload)> {
+			// take the biggest period possible.
+			let period = BlockHashCount::get()
+					.checked_next_power_of_two()
+					.map(|c| c / 2)
+					.unwrap_or(2) as u64;
+			let current_block = System::block_number()
+					.saturated_into::<u64>()
+					// make sure we actually construct on top of the parent block.
+					.saturating_sub(1);
+			let tip = 0;
+			let extra: SignedExtra = (
+					system::CheckVersion::<Runtime>::new(),
+					system::CheckGenesis::<Runtime>::new(),
+					system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+					system::CheckNonce::<Runtime>::from(index),
+					system::CheckWeight::<Runtime>::new(),
+					transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+			);
+			let raw_payload = generic::SignedPayload::new(call, extra).map_err(|e| {
+				    debug::warn!("Unable to create signed payload: {:?}", e);
+			}).ok()?;
+			let signature = TSigner::sign(public, &raw_payload)?;
+			let address = Indices::unlookup(account);
+			let (call, extra, _) = raw_payload.deconstruct();
+			Some((call, (address, signature, extra)))
+	}
+ }

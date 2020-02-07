@@ -16,6 +16,7 @@ sudo = { version = "2.0.0", default-features = false, package = "pallet-sudo", p
 system = { version = "2.0.0", default-features = false, package = "frame-system", path = "../../../frame/system" }
 timestamp = { version = "2.0.0", default-features = false, package = "pallet-timestamp", path = "../../../frame/timestamp" }
 transaction-payment = { version = "2.0.0", default-features = false, package = "pallet-transaction-payment", path = "../../../frame/transaction-payment" }
+example-offchain-worker = { default-features = false, package = "pallet-example-offchain-worker", path = "../../../frame/example-offchain-worker" }
 
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 frame-executive = { version = "2.0.0", default-features = false, path = "../../../frame/executive" }

@@ -6111,7 +6111,6 @@ dependencies = [
  "bytes 0.5.4",
  "env_logger 0.7.1",
  "fnv",
- "futures 0.1.29",
  "futures 0.3.1",
  "futures-timer 2.0.2",
  "hyper 0.13.2",
@@ -6133,7 +6132,7 @@ dependencies = [
  "sp-transaction-pool",
  "substrate-test-runtime-client",
  "threadpool",
- "tokio 0.1.22",
+ "tokio 0.2.11",
 ]
 
 [[package]]

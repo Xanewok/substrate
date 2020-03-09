@@ -15,7 +15,7 @@
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::path::PathBuf;
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::fs;
 use log::info;
 use structopt::{StructOpt, clap::arg_enum};
@@ -388,12 +388,12 @@ impl RunCmd {
 			});
 
 		if config.rpc_http.is_none() || self.rpc_port.is_some() {
-			let rpc_interface: &str = interface_str(self.rpc_external, self.unsafe_rpc_external, self.validator)?;
-			config.rpc_http = Some(parse_address(&format!("{}:{}", rpc_interface, 9933), self.rpc_port)?);
+			let interface = rpc_interface(self.rpc_external, self.unsafe_rpc_external, self.validator)?;
+			config.rpc_http = Some(SocketAddr::new(interface, self.rpc_port.unwrap_or(9933)));
 		}
 		if config.rpc_ws.is_none() || self.ws_port.is_some() {
-			let ws_interface: &str = interface_str(self.ws_external, self.unsafe_ws_external, self.validator)?;
-			config.rpc_ws = Some(parse_address(&format!("{}:{}", ws_interface, 9944), self.ws_port)?);
+			let interface = rpc_interface(self.ws_external, self.unsafe_ws_external, self.validator)?;
+			config.rpc_ws = Some(SocketAddr::new(interface, self.ws_port.unwrap_or(9944)));
 		}
 
 		config.rpc_ws_max_connections = self.ws_max_connections;
@@ -423,9 +423,10 @@ impl RunCmd {
 		if self.no_prometheus {
 			config.prometheus_config = None;
 		} else if config.prometheus_config.is_none() {
-			let prometheus_interface: &str = if self.prometheus_external { "0.0.0.0" } else { "127.0.0.1" };
+			let interface = if self.prometheus_external { Ipv4Addr::UNSPECIFIED } else { Ipv4Addr::LOCALHOST };
+
 			config.prometheus_config = Some(PrometheusConfig::new_with_default_registry(
-				parse_address(&format!("{}:{}", prometheus_interface, 9615), self.prometheus_port)?,
+				SocketAddr::new(interface.into(), self.prometheus_port.unwrap_or(9615))
 			));
 		}
 
@@ -526,25 +527,11 @@ fn generate_node_name() -> String {
 	result
 }
 
-fn parse_address(
-	address: &str,
-	port: Option<u16>,
-) -> Result<SocketAddr, String> {
-	let mut address: SocketAddr = address.parse().map_err(
-		|_| format!("Invalid address: {}", address)
-	)?;
-	if let Some(port) = port {
-		address.set_port(port);
-	}
-
-	Ok(address)
-}
-
-fn interface_str(
+fn rpc_interface(
 	is_external: bool,
 	is_unsafe_external: bool,
 	is_validator: bool,
-) -> Result<&'static str, error::Error> {
+) -> Result<IpAddr, error::Error> {
 	if is_external && is_validator {
 		return Err(error::Error::Input("--rpc-external and --ws-external options shouldn't be \
 		used if the node is running as a validator. Use `--unsafe-rpc-external` if you understand \
@@ -555,9 +542,9 @@ fn interface_str(
 		log::warn!("It isn't safe to expose RPC publicly without a proxy server that filters \
 		available set of RPC methods.");
 
-		Ok("0.0.0.0")
+		Ok(Ipv4Addr::UNSPECIFIED.into())
 	} else {
-		Ok("127.0.0.1")
+		Ok(Ipv4Addr::LOCALHOST.into())
 	}
 }
 

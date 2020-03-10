@@ -45,6 +45,7 @@ use sp_runtime::traits::{
 use sp_api::ProvideRuntimeApi;
 use sc_executor::{NativeExecutor, NativeExecutionDispatch};
 use std::{
+	collections::HashMap,
 	io::{Read, Write, Seek},
 	marker::PhantomData, sync::Arc, pin::Pin
 };
@@ -1186,26 +1187,21 @@ ServiceBuilder<
 			);
 			let system = system::System::new(system_info, system_rpc_tx.clone());
 
-			match offchain_storage.clone() {
-				Some(storage) => {
+			let maybe_offchain_rpc = offchain_storage.clone()
+				.map(|storage| {
 					let offchain = sc_rpc::offchain::Offchain::new(storage);
-					sc_rpc_server::rpc_handler((
-						state::StateApi::to_delegate(state),
-						chain::ChainApi::to_delegate(chain),
-						offchain::OffchainApi::to_delegate(offchain),
-						author::AuthorApi::to_delegate(author),
-						system::SystemApi::to_delegate(system),
-						rpc_extensions.clone(),
-					))
-				},
-				None => sc_rpc_server::rpc_handler((
-					state::StateApi::to_delegate(state),
-					chain::ChainApi::to_delegate(chain),
-					author::AuthorApi::to_delegate(author),
-					system::SystemApi::to_delegate(system),
-					rpc_extensions.clone(),
-				))
-			}
+					let delegate = offchain::OffchainApi::to_delegate(offchain);
+					delegate.into_iter().collect::<HashMap<_, _>>()
+			}).unwrap_or_default();
+
+			sc_rpc_server::rpc_handler((
+				state::StateApi::to_delegate(state),
+				chain::ChainApi::to_delegate(chain),
+				maybe_offchain_rpc,
+				author::AuthorApi::to_delegate(author),
+				system::SystemApi::to_delegate(system),
+				rpc_extensions.clone(),
+			))
 		};
 		let rpc_handlers = gen_handler();
 		let rpc = start_rpc_servers(&config, gen_handler)?;
